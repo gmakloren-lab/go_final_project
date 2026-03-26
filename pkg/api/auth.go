@@ -76,35 +76,47 @@ func validJWT(tokenString string, password string) bool {
 // если совпадает — возвращает JWT токен
 func signinHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		writeJSON(w, SigninResponse{Error: "method not allowed"})
+		writeJSON(w, http.StatusMethodNotAllowed, SigninResponse{
+			Error: "method not allowed",
+		})
 		return
 	}
 
 	pass := os.Getenv("TODO_PASSWORD")
 	if pass == "" {
-		writeJSON(w, SigninResponse{Error: "Пароль не задан"})
+		writeJSON(w, http.StatusInternalServerError, SigninResponse{
+			Error: "Пароль не задан",
+		})
 		return
 	}
 
 	var req SigninRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		writeJSON(w, SigninResponse{Error: err.Error()})
+		writeJSON(w, http.StatusBadRequest, SigninResponse{
+			Error: err.Error(),
+		})
 		return
 	}
 
 	if req.Password != pass {
-		writeJSON(w, SigninResponse{Error: "Неверный пароль"})
+		writeJSON(w, http.StatusUnauthorized, SigninResponse{
+			Error: "Неверный пароль",
+		})
 		return
 	}
 
 	token, err := makeJWT(pass)
 	if err != nil {
-		writeJSON(w, SigninResponse{Error: err.Error()})
+		writeJSON(w, http.StatusInternalServerError, SigninResponse{
+			Error: err.Error(),
+		})
 		return
 	}
 
-	writeJSON(w, SigninResponse{Token: token})
+	writeJSON(w, http.StatusOK, SigninResponse{
+		Token: token,
+	})
 }
 
 // auth — middleware для проверки авторизации
