@@ -7,12 +7,7 @@ import (
 	"github.com/gmakloren-lab/go_final_project/pkg/db"
 )
 
-// taskHandler — главный обработчик /api/task.
-// В зависимости от HTTP-метода вызывает:
-// POST    → addTaskHandler
-// GET     → getTaskHandler
-// PUT     → updateTaskHandler
-// DELETE  → deleteTaskHandler
+// taskHandler — маршрутизатор для /api/task
 func taskHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
@@ -24,77 +19,91 @@ func taskHandler(w http.ResponseWriter, r *http.Request) {
 	case http.MethodDelete:
 		deleteTaskHandler(w, r)
 	default:
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{
+			"error": "method not allowed",
+		})
 	}
 }
 
-// getTaskHandler — обрабатывает GET /api/task?id=
-// Возвращает одну задачу по id.
+// getTaskHandler — возвращает задачу по id
 func getTaskHandler(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	if id == "" {
-		writeJSON(w, map[string]string{"error": "Не указан идентификатор"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "Не указан идентификатор",
+		})
 		return
 	}
 
 	task, err := db.GetTask(id)
 	if err != nil {
-		writeJSON(w, map[string]string{"error": err.Error()})
+		writeJSON(w, http.StatusNotFound, map[string]string{
+			"error": err.Error(),
+		})
 		return
 	}
 
-	writeJSON(w, task)
+	writeJSON(w, http.StatusOK, task)
 }
 
-// updateTaskHandler — обрабатывает PUT /api/task
-// Обновляет существующую задачу после валидации.
+// updateTaskHandler — обновляет задачу
 func updateTaskHandler(w http.ResponseWriter, r *http.Request) {
 	var task db.Task
-	err := json.NewDecoder(r.Body).Decode(&task)
-	if err != nil {
-		writeJSON(w, map[string]string{"error": err.Error()})
+
+	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error": err.Error(),
+		})
 		return
 	}
 
 	if task.ID == "" {
-		writeJSON(w, map[string]string{"error": "Не указан идентификатор"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "Не указан идентификатор",
+		})
 		return
 	}
 
 	if task.Title == "" {
-		writeJSON(w, map[string]string{"error": "Не указан заголовок задачи"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "Не указан заголовок задачи",
+		})
 		return
 	}
 
-	err = checkDate(&task)
-	if err != nil {
-		writeJSON(w, map[string]string{"error": err.Error()})
+	if err := checkDate(&task); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error": err.Error(),
+		})
 		return
 	}
 
-	err = db.UpdateTask(&task)
-	if err != nil {
-		writeJSON(w, map[string]string{"error": err.Error()})
+	if err := db.UpdateTask(&task); err != nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{
+			"error": err.Error(),
+		})
 		return
 	}
 
-	writeJSON(w, map[string]string{})
+	writeJSON(w, http.StatusOK, map[string]string{})
 }
 
-// deleteTaskHandler — обрабатывает DELETE /api/task?id=
-// Удаляет задачу по id.
+// deleteTaskHandler — удаляет задачу
 func deleteTaskHandler(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	if id == "" {
-		writeJSON(w, map[string]string{"error": "Не указан идентификатор"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "Не указан идентификатор",
+		})
 		return
 	}
 
-	err := db.DeleteTask(id)
-	if err != nil {
-		writeJSON(w, map[string]string{"error": err.Error()})
+	if err := db.DeleteTask(id); err != nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{
+			"error": err.Error(),
+		})
 		return
 	}
 
-	writeJSON(w, map[string]string{})
+	writeJSON(w, http.StatusOK, map[string]string{})
 }

@@ -21,6 +21,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer db.DB.Close()
 
 	api.Init()
 	// Сервер

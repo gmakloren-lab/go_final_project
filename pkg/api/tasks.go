@@ -10,23 +10,18 @@ type TasksResp struct {
 	Tasks []*db.Task `json:"tasks"`
 }
 
-// tasksHandler — обрабатывает GET /api/tasks
-// Возвращает список ближайших задач (с лимитом),
-// отсортированных по дате.
-// Поддерживает поиск (если реализован).
+// tasksHandler — возвращает список задач
 func tasksHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		writeJSON(w, map[string]string{
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{
 			"error": "method not allowed",
 		})
 		return
 	}
 
-	search := r.URL.Query().Get("search")
-
-	tasks, err := db.Tasks(50, search)
+	tasks, err := db.Tasks(50)
 	if err != nil {
-		writeJSON(w, map[string]string{
+		writeJSON(w, http.StatusInternalServerError, map[string]string{
 			"error": err.Error(),
 		})
 		return
@@ -36,7 +31,7 @@ func tasksHandler(w http.ResponseWriter, r *http.Request) {
 		tasks = []*db.Task{}
 	}
 
-	writeJSON(w, TasksResp{
+	writeJSON(w, http.StatusOK, TasksResp{
 		Tasks: tasks,
 	})
 }
